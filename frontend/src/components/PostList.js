@@ -1,17 +1,28 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchPosts, deletePost } from "../store/postsSlice";
 
 function PostList() {
-  const [posts, setPosts] = useState([]);
+  const dispatch = useDispatch();
+  const { posts, loading, error } = useSelector((state) => state.posts);
 
   useEffect(() => {
-    axios
-      .get("http://localhost:5000/api/posts")
-      .then((res) => setPosts(res.data))
-      .catch((err) => console.error(err));
-    console.log("==========>posts", posts);
-  }, []);
+    dispatch(fetchPosts());
+  }, [dispatch]);
+  
+  const handleDelete = (id) => {
+    dispatch(deletePost(id));
+  };
+  
+  if (loading) {
+    return <div className="text-center mt-5">Loading posts...</div>;
+  }
+
+  if (error) {
+    return <div className="text-center mt-5 text-danger">{error}</div>;
+  }
 
   return (
     <div className="container mt-5">
@@ -28,32 +39,36 @@ function PostList() {
             <div className="card h-100">
               <div className="card-body">
                 <h5 className="card-title">{post.title}</h5>
-                <p className="card-text">{post.content.slice(0, 100)}...</p>
-                <Link to={`/posts/${post._id}`} className="btn btn-primary">
-                  Read More
-                </Link>
+                <p className="card-text">
+                  {post.content.length > 100
+                    ? `${post.content.slice(0, 100)}...`
+                    : post.content}
+                </p>
+                <div className="d-flex justify-content-between">
+                  <Link to={`/posts/${post._id}`} className="btn btn-primary">
+                    Read More
+                  </Link>
+                  <div>
+                    <Link
+                      to={`/edit/${post._id}`} // Navigate to the edit page
+                      className="btn btn-warning mx-2"
+                    >
+                      Update
+                    </Link>
+                    <button
+                      onClick={() => handleDelete(post._id)}
+                      className="btn btn-danger"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         ))}
       </div>
     </div>
-    //   <div className="container mt-4">
-    //   <h1 className="mb-4">Blog Posts</h1>
-    //   <div className="row">
-    //     {posts.map(post => (
-    //       <div className="col-md-6 mb-3" key={post._id}>
-    //         <div className="card h-100">
-    //           <div className="card-body">
-    //             <h5 className="card-title">{post.title}</h5>
-    //             <p className="card-text">{post.content.slice(0, 100)}...</p>
-    //             <Link to={`/posts/${post._id}`} className="btn btn-primary">Read More</Link>
-    //           </div>
-    //         </div>
-    //       </div>
-    //     ))}
-    //   </div>
-    // </div>
   );
 }
 
