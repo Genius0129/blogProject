@@ -1,69 +1,54 @@
-// import React, { useEffect, useState } from 'react';
-// import { useParams } from 'react-router-dom';
-// import axios from 'axios';
-// import CommentForm from './CommentForm';
-
-// function PostDetail() {
-//   const { id } = useParams();
-//   const [post, setPost] = useState({});
-//   const [comments, setComments] = useState([]);
-
-//   useEffect(() => {
-//     axios.get(`http://localhost:5000/api/posts/${id}`)
-//       .then(res => setPost(res.data));
-
-//     axios.get(`http://localhost:5000/api/comments/${id}`)
-//       .then(res => setComments(res.data));
-//   }, [id]);
-
-//   const handleAddComment = (newComment) => {
-//     setComments([newComment, ...comments]);
-//   };
-
-//   return (
-//     <div>
-//       <h2>{post.title}</h2>
-//       <p>{post.content}</p>
-
-//       <h3>Comments</h3>
-//       <CommentForm postId={id} onAdd={handleAddComment} />
-
-//       {comments.map(comment => (
-//         <div key={comment._id}>
-//           <strong>{comment.name}</strong>: {comment.message}
-//         </div>
-//       ))}
-//     </div>
-//   );
-// }
-
-// export default PostDetail;
-
-import { useParams } from 'react-router-dom';
-import { useEffect, useState } from 'react';
-import axios from 'axios';
-import CommentForm from './CommentForm';
+import { useParams, useNavigate } from "react-router-dom";
+import { useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchComments, addComment } from "../store/commentsSlice";
+import { fetchPosts } from "../store/postsSlice";
+import CommentForm from "./CommentForm";
 
 export default function PostDetail() {
   const { id } = useParams();
-  const [post, setPost] = useState(null);
-  const [comments, setComments] = useState([]);
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+
+  const { posts, loading: postsLoading, error: postsError } = useSelector((state) => state.posts);
+  const { comments, loading: commentsLoading, error: commentsError } = useSelector((state) => state.comments);
+
+  const post = posts.find((post) => post._id === id);
 
   useEffect(() => {
-    axios.get(`http://localhost:5000/api/posts/${id}`)
-      .then(res => setPost(res.data));
-    axios.get(`http://localhost:5000/api/comments/${id}`)
-      .then(res => setComments(res.data));
-  }, [id]);
+    if (!post) {
+      dispatch(fetchPosts()); // Dispatch action to fetch all posts if not found in the Redux state
+    }
+    // Fetch comments for the specific post
+    dispatch(fetchComments(id));
+  }, [dispatch, id, post]);
 
-  const addComment = (newComment) => {
-    setComments(prev => [newComment, ...prev]);
+  const addNewComment = (newComment) => {
+    dispatch(addComment({ postId: id, ...newComment })); // Dispatch action to add comment
   };
 
-  if (!post) return <div className="text-center mt-5">Loading post...</div>;
+  const handleBack = () => {
+    navigate(`/`);
+  };
+
+  if (postsLoading || commentsLoading)
+    return <div className="text-center mt-5">Loading post...</div>;
+
+  if (postsError || commentsError)
+    return <div className="text-center mt-5 text-danger">{postsError || commentsError}</div>;
+
+  if (!post) return <div className="text-center mt-5">Post not found</div>;
 
   return (
     <div className="container mt-5">
+      {/* Back Button */}
+      <div className="back-button-container">
+        <button className="btn btn-secondary mb-4" onClick={handleBack}>
+          Back
+        </button>
+      </div>
+
+      {/* Post details */}
       <div className="card mb-4">
         <div className="card-body">
           <h2 className="card-title">{post.title}</h2>
@@ -71,13 +56,15 @@ export default function PostDetail() {
         </div>
       </div>
 
+      {/* Add Comment Form */}
       <div className="card mb-4">
         <div className="card-body">
           <h4 className="mb-3">Add a Comment</h4>
-          <CommentForm postId={id} onAdd={addComment} />
+          <CommentForm postId={id} onAdd={addNewComment} />
         </div>
       </div>
 
+      {/* Comments Section */}
       <div className="card">
         <div className="card-body">
           <h4 className="mb-3">Comments</h4>
